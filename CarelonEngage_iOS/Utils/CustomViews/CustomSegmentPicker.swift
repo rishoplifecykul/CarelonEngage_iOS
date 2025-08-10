@@ -8,17 +8,14 @@
 import SwiftUI
 
 // MARK: - Custom Segment Picker
-
 struct CustomSegmentPicker<Segment: SegmentProtocol>: View {
     
     // MARK: - Properities
-    
     @Binding var selectedSegment: Segment
     let segments: [Segment]
     let titleForSelectedSegment: (Segment) -> String
     
     // MARK: - View
-    
     var body: some View {
         Picker("Select Segment", selection: $selectedSegment) {
             ForEach(segments) { segment in
@@ -30,7 +27,6 @@ struct CustomSegmentPicker<Segment: SegmentProtocol>: View {
 }
 
 // MARK: - Preview
-
 #Preview {
     CustomSegmentPicker(
         selectedSegment: .constant(.following),

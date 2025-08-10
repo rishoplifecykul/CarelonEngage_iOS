@@ -11,18 +11,15 @@ import SwiftUI
 struct HomeView: View {
     
     // MARK: - Properties
-    
     @State private var selectedSegment: HomeScreenSegment = .following
     
     // MARK: - View
-    
     var body: some View {
         VStack() {
             CustomSegmentPicker(selectedSegment: $selectedSegment, segments: HomeScreenSegment.allCases, titleForSelectedSegment: {$0.title})
                 .padding(.top, 5)
             
             // MARK: - Segment Content
-            
             Group {
                 switch selectedSegment {
                 case .following: FollowingView()
@@ -36,7 +33,6 @@ struct HomeView: View {
 }
 
 // MARK: - Preview
-
 #Preview {
     HomeView()
 }

@@ -7,6 +7,7 @@
 
 import Foundation
 
+//MARK: - API Services
 struct APIServices {
     static let baseURL = "https://cykul.in/app/lifeCykul/webservice"
     static let countryCodes = baseURL + "/V3.1.2/countryCodes.php"

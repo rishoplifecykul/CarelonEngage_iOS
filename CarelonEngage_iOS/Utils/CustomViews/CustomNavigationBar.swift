@@ -8,22 +8,18 @@
 import SwiftUI
 
 // MARK: - Custom Navigation Bar
-
 struct CustomNavigationBar: View {
     
     // MARK: - Properties
-    
     let title: String
     let showProfileButton: Bool
     let showNotificationButton: Bool
     
     // MARK: - Actions
-    
     let onProfileButtonTap: (() -> Void)?
     let onNotificationButtonTap: (() -> Void)?
     
     // MARK: - View
-    
     var body: some View {
         HStack {
             Text(title)
@@ -72,7 +68,6 @@ struct CustomNavigationBar: View {
 }
 
 // MARK: - Preview
-
 #Preview {
     CustomNavigationBar(title: "Home",
                         showProfileButton: true,

@@ -8,13 +8,15 @@
 import Foundation
 
 // MARK: - Countries
-
 struct Countries: Codable {
     let countries: [Country]
 }
 
 // MARK: - Country
-
 struct Country: Codable {
     let name, code: String
+}
+
+extension Country {
+    var selfID: String { name + code }
 }

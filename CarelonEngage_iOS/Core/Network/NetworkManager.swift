@@ -6,36 +6,30 @@
 //
 
 import Foundation
-import Combine
+import Network
 
-enum HTTPMethod: String {
-    case get = "GET"
-    case post = "POST"
-}
-
-enum NetworkError: Error {
-    case invalidURL
-    case noData
-    case decodingError
-    case serverError(Int)
-    case unknown(Error)
-    
-    var localizedDescription: String {
-        switch self {
-        case .invalidURL: return "Invalid URL"
-        case .noData: return "No data received"
-        case .decodingError: return "Failed to decode response"
-        case .serverError(let statusCode): return "Server error: \(statusCode)"
-        case .unknown(let error): return error.localizedDescription
-        }
-    }
-}
-
-class NetworkManager {
+// MARK: - Network Manager Class
+final class NetworkManager {
     static let shared = NetworkManager()
-    private init() {}
+    private let monitor = NWPathMonitor()
+    private let queue = DispatchQueue(label: "NetworkMonitor")
+    private var isConnected: Bool = true
     
-    func request(urlString: String, method: HTTPMethod, parameters: [String : Any]? = nil, authorizationToken: String? = nil, completion: @escaping(Result<Data, NetworkError>) -> Void) {
+    private init() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            self?.isConnected = (path.status == .satisfied)
+        }
+        monitor.start(queue: queue)
+    }
+    
+    // MARK: - Public Method
+    func request<T: Decodable>(urlString: String, method: HTTPMethod, parameters: [String: Any]? = nil, bodyType: BodyType,  headers: [String: String]? = nil, responseType: T.Type, completion: @escaping (Result<T, NetworkError>) -> Void ) {
+        // Check Internet Connection
+        guard isConnected else {
+            completion(.failure(.noInternet))
+            return
+        }
+        
         guard let url = URL(string: urlString) else {
             completion(.failure(.invalidURL))
             return
@@ -43,33 +37,62 @@ class NetworkManager {
         
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        if let token = authorizationToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        // Add Headers
+        headers?.forEach { key, value in
+            request.setValue(value, forHTTPHeaderField: key)
         }
         
-        if let params = parameters {
-            do {
-                request.httpBody = try JSONSerialization.data(withJSONObject: params, options: [])
-            } catch {
-                completion(.failure(.unknown(error)))
-            }
-        }
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(.unknown(error)))
+        // Add Body
+        switch bodyType {
+        case .formURLEncoded:
+            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+            if let params = parameters as? [String: String] {
+                let bodyString = params
+                    .map { "\($0.key)=\(percentEscape($0.value))" }
+                    .joined(separator: "&")
+                
+                request.httpBody = bodyString.data(using: .utf8)
+            } else {
+                completion(.failure(.invalidParameters))
                 return
             }
             
+        case .json:
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if let parameters = parameters {
+                request.httpBody = try? JSONSerialization.data(withJSONObject: parameters, options: [])
+            }
+            
+        case .multipart(let boundary, let media):
+            let finalBoundary = boundary ?? "Boundary-\(UUID().uuidString)"
+            request.setValue("multipart/form-data; boundary=\(finalBoundary)", forHTTPHeaderField: "Content-Type")
+            request.httpBody = createMultipartBody(parameters: parameters, media: media, boundary: finalBoundary)
+        }
+        
+        // Network Call
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            
+            // Network Level Error
+            if let error = error as NSError?, error.domain == NSURLErrorDomain {
+                if error.code == NSURLErrorNotConnectedToInternet {
+                    completion(.failure(.noInternet))
+                } else if error.code == NSURLErrorTimedOut {
+                    completion(.failure(.timeout))
+                } else {
+                    completion(.failure(.networkError(error)))
+                }
+                return
+            }
+            
+            // HTTP Response Validation
             guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(.noData))
+                completion(.failure(.invalidResponse))
                 return
             }
             
             guard (200...299).contains(httpResponse.statusCode) else {
-                completion(.failure(.serverError(httpResponse.statusCode)))
+                completion(.failure(.httpError(code: httpResponse.statusCode, message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode))))
                 return
             }
             
@@ -78,8 +101,58 @@ class NetworkManager {
                 return
             }
             
-            completion(.success(data))
-            
-        }.resume()
+            // Decode JSON
+            do {
+                let decoded = try JSONDecoder().decode(T.self, from: data)
+                completion(.success(decoded))
+            } catch {
+                if let rawString = String(data: data, encoding: .utf8) {
+                    print("🔍 Raw Response: \(rawString)")
+                }
+                completion(.failure(.decodingFailed(error)))
+            }
+        }
+        
+        task.resume()
     }
+    
+    // MARK: - Multipart Helper
+    private func createMultipartBody(parameters: [String: Any]?, media: [Media]?, boundary: String) -> Data {
+        var body = Data()
+        let lineBreak = "\r\n"
+        
+        // Parameters
+        parameters?.forEach { key, value in
+            body.append("--\(boundary)\(lineBreak)")
+            body.append("Content-Disposition: form-data; name=\"\(key)\"\(lineBreak + lineBreak)")
+            body.append("\(value)\(lineBreak)")
+        }
+        
+        // Media Files
+        media?.forEach { media in
+            body.append("--\(boundary)\(lineBreak)")
+            body.append("Content-Disposition: form-data; name=\"\(media.key)\"; filename=\"\(media.filename)\"\(lineBreak)")
+            body.append("Content-Type: \(media.mimeType)\(lineBreak + lineBreak)")
+            body.append(media.data)
+            body.append(lineBreak)
+        }
+        
+        body.append("--\(boundary)--\(lineBreak)")
+        return body
+    }
+    
+    // MARK: - Percent Escape
+    private func percentEscape(_ string: String) -> String {
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._* ")
+        return string.addingPercentEncoding(withAllowedCharacters: allowed)?.replacingOccurrences(of: " ", with: "+") ?? string
+    }
+}
+
+
+// MARK: - Media Struct
+struct Media {
+    let key: String
+    let filename: String
+    let data: Data
+    let mimeType: String
 }

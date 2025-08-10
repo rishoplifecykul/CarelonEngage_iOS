@@ -11,11 +11,9 @@ import SwiftUI
 struct TabBarView: View {
     
     // MARK: - Properties
-    
     @Binding var selectedTab: Tab
     
     // MARK: - View
-    
     var body: some View {
         GeometryReader { geometry in
             let safeAreaBottom = geometry.safeAreaInsets.bottom

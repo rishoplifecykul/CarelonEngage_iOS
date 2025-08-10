@@ -8,5 +8,4 @@
 import Foundation
 
 // MARK: - Protocol constraints for generic Segments
-
 protocol SegmentProtocol: Hashable, CaseIterable, Identifiable & RawRepresentable where RawValue == String {}

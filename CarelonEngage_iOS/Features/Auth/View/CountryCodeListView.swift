@@ -8,11 +8,9 @@
 import SwiftUI
 
 // MARK: - Country Code List View Model
-
 struct CountryCodeListView: View {
     
     // MARK: - Properties
-    
     @ObservedObject var countryListViewModel: CountryListViewModel
     @Binding var selectedCountryCode: String
     @Environment(\.dismiss) private var dismiss
@@ -20,15 +18,16 @@ struct CountryCodeListView: View {
     // MARK: - View
     var body: some View {
         NavigationStack {
-            List(countryListViewModel.countries, id: \.code) { country in
+            List(countryListViewModel.filteredCountries, id: \.selfID) { country in
                 Button {
-                    selectedCountryCode = country.code
+                    selectedCountryCode = "+" + country.code
                     dismiss()
                 } label: {
                     HStack {
-                        Text("+" + country.code)
                         Text(country.name)
+                        Text("(+" + "\(country.code))")
                     }
+                    .foregroundStyle(Color.black)
                 } // Button
             } // List
             .navigationTitle("Select Country")
@@ -44,7 +43,11 @@ struct CountryCodeListView: View {
                 get: { countryListViewModel.errorMessage != nil },
                 set: { _ in countryListViewModel.errorMessage = nil }
             )) {
-                Alert(title: Text("Error"), message: Text(countryListViewModel.errorMessage ?? ""), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"),
+                      message: Text(countryListViewModel.errorMessage ?? ""),
+                      dismissButton: .default(Text("OK")) {
+                    dismiss()
+                })
             }
             .onAppear {
                 countryListViewModel.fetchCountries()
@@ -54,7 +57,6 @@ struct CountryCodeListView: View {
 }
 
 // MARK: - Preview
-
 #Preview {
     CountryCodeListViewPreviewWrapper()
 }
@@ -69,7 +71,6 @@ private struct CountryCodeListViewPreviewWrapper: View {
             Country(name: "India", code: "+91"),
             Country(name: "United Kingdom", code: "+44")
         ]
-        
         return CountryCodeListView(countryListViewModel: viewModel, selectedCountryCode: $selectedCode)
     }
 }

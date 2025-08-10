@@ -8,18 +8,15 @@
 import SwiftUI
 
 // MARK: - My Activities
-
 struct MyActivitiesView: View {
     
     // MARK: - View
-    
     var body: some View {
         Text("My Activity Screen")
     }
 }
 
 // MARK: - Preview
-
 #Preview {
     MyActivitiesView()
 }

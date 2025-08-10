@@ -11,11 +11,9 @@ import SwiftUI
 struct BottomTabView: View {
     
     // MARK: - Properties
-    
     @State private var selectedTab: Tab = .home
     
     // MARK: - View
-    
     var body: some View {
         VStack(spacing: 0) {
             CustomNavigationBar(title: selectedTab.title,
@@ -49,7 +47,6 @@ struct BottomTabView: View {
 }
 
 // MARK: - Preview
-
 #Preview {
     BottomTabView()
 }

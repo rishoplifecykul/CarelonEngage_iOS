@@ -8,18 +8,15 @@
 import SwiftUI
 
 // MARK: - Featured View
-
 struct FeaturedView: View {
     
     // MARK: - View
-    
     var body: some View {
         Text("FeaturedView")
     }
 }
 
 // MARK: - Preview
-
 #Preview {
     FeaturedView()
 }

@@ -7,12 +7,13 @@
 
 import Foundation
 
+// MARK: - Constants
 struct Constants {
     
     static let appName = "Carelon.Engage"
+    static let appNameShort = "carelon"
     
     // MARK: - Login Screen Constants
-    
     struct LoginScreen {
         static let loginScreenTitle = "Login"
         static let loginButtonTitle = "Login"
@@ -21,7 +22,6 @@ struct Constants {
     }
     
     // MARK: - SignUp Screen Constants
-    
     struct SignUpScreen {
         static let signUpScreenTitle = "Sign Up"
         static let proceedButtonTitle = "Proceed"
@@ -33,7 +33,6 @@ struct Constants {
     }
     
     // MARK: - Home Screen Constants
-    
     struct HomeScreen {
         static let homeScreenTitle = "Home"
     }

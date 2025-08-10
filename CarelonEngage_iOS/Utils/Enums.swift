@@ -7,24 +7,55 @@
 
 import Foundation
 
-// MARK: - Login Focus Enums
+// MARK: - HTTP Methods Enums
+enum HTTPMethod: String {
+    case GET = "GET"
+    case POST = "POST"
+    case PUT = "PUT"
+    case DELETE = "DELETE"
+    case UPDATE = "UPDATE"
+}
 
+// MARK: - Body Types
+enum BodyType {
+    case json
+    case formURLEncoded
+    case multipart(boundary: String?, media: [Media]?)
+}
+
+// MARK: - Network Error
+enum NetworkError: Error {
+    case invalidURL
+    case noData
+    case decodingFailed(Error)
+    case httpError(code: Int, message: String)
+    case invalidResponse
+    case noInternet
+    case timeout
+    case networkError(Error)
+    case invalidParameters
+}
+
+// MARK: - Login Type Enum
+enum LoginType: String {
+    case LOGIN = "login"
+    case REGISTER = "register"
+}
+
+// MARK: - Login Focus Enums
 enum LoginTextFieldFocus: Hashable {
     case countryCode
     case mobileNumber
 }
 
 // MARK: - Tab Enums
-
 enum Tab: String, CaseIterable, Identifiable {
     case home, programs, record, search, menu
     
     // MARK: - ID
-    
     var id: String { rawValue }
     
     // MARK: - Icons
-    
     var icon: String {
         switch self {
         case .home: return "house"
@@ -36,7 +67,6 @@ enum Tab: String, CaseIterable, Identifiable {
     }
     
     // MARK: - Title
-    
     var title: String {
         switch self {
         case .home: return "Home"
@@ -49,16 +79,13 @@ enum Tab: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Home Segment
-
 enum HomeScreenSegment: String, SegmentProtocol {
     case following, myactivities, featured
     
     // MARK: - ID
-    
     var id: String { rawValue }
     
     // MARK: - Title
-    
     var title: String {
         switch self {
         case .following: return "Following"

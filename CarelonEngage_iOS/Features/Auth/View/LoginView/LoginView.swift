@@ -7,19 +7,30 @@
 
 import SwiftUI
 
+// MARK: - Login View
 struct LoginView: View {
     
     // MARK: - Properties
-    
     @State private var countryCode: String = ""
     @State private var mobileNumber: String = ""
     @State private var showCountryCodeSelector = false
     @StateObject private var countryListViewModel = CountryListViewModel()
+    @StateObject private var loginViewModel = LoginViewModel()
     @FocusState private var isCountryCodeFocused: Bool
     @FocusState private var isMobileNumberFocused: Bool
     
-    // MARK: - View
+    // sanitized digits-only mobile number
+    private var sanitizedMobile: String {
+        mobileNumber.filter { $0.isNumber }
+    }
     
+    // single source of truth for whether login should be enabled
+    private var isLoginEnabled: Bool {
+        !countryCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        countryListViewModel.isValidMobileNumber(sanitizedMobile, for: countryCode)
+    }
+    
+    // MARK: - View
     var body: some View {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
@@ -35,7 +46,6 @@ struct LoginView: View {
                 
                 GeometryReader { geometry in
                     VStack(spacing: 4) {
-                        
                         Image("LoginLogo")
                             .resizable()
                             .scaledToFit()
@@ -66,13 +76,18 @@ struct LoginView: View {
                                 isCountryCodeFocused = false
                             }
                             
-                            FloatingTextField(
-                                title: Constants.LoginScreen.mobileNumberTextFieldPlaceholder,
-                                keyboardType: .numberPad,
-                                isEditable: true,
-                                text: $mobileNumber,
-                                isFocused: $isMobileNumberFocused
-                            )
+                            Group {
+                                FloatingTextField(
+                                    title: Constants.LoginScreen.mobileNumberTextFieldPlaceholder,
+                                    keyboardType: .numberPad,
+                                    isEditable: true,
+                                    text: $mobileNumber,
+                                    isFocused: $isMobileNumberFocused
+                                )
+                                .onChange(of: mobileNumber) { oldValue, newValue in
+                                    mobileNumber = countryListViewModel.limitMobileNumber(newValue, for: countryCode)
+                                }
+                            } // Group
                             .toolbar {
                                 ToolbarItemGroup(placement: .keyboard) {
                                     Spacer()
@@ -95,7 +110,8 @@ struct LoginView: View {
                         }
                         
                         Button(action: {
-                            // Handle login tap
+                            let sanitizedCode = countryCode.replacingOccurrences(of: "+", with: "")
+                            loginViewModel.verifyLogin(countryCode: sanitizedCode, mobileNumber: mobileNumber, type: LoginType.LOGIN.rawValue, whichApp: Constants.appNameShort)
                         }) {
                             Text(Constants.LoginScreen.loginButtonTitle)
                                 .foregroundColor(.white)
@@ -105,15 +121,20 @@ struct LoginView: View {
                                 .background(Color.appBaseColor)
                                 .cornerRadius(8)
                         }
+                        .disabled(!isLoginEnabled)
+                        .allowsHitTesting(isLoginEnabled)
+                        .opacity(isLoginEnabled ? 1.0 : 0.6)
                         .padding(.horizontal, 18)
                         .padding(.top)
                         
                         Spacer()
                     }// Vstack
                     .frame(width: geometry.size.width, height: geometry.size.height)
+                    .onChange(of: countryCode) { _ , _ in
+                        mobileNumber = countryListViewModel.limitMobileNumber(mobileNumber, for: countryCode)
+                    }
                 }// Geometry
             }// Vstack
-            
             CurvedBottomShape()
                 .fill(Color.appBaseColor)
                 .frame(height: UIScreen.main.bounds.height * 0.25)
